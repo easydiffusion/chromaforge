@@ -1,4 +1,5 @@
 import os
+import gc
 import re
 import torch
 import logging
@@ -757,6 +758,8 @@ def preprocess_state_dict(sd):
 
 
 def split_state_dict(sd, additional_state_dicts: list = None):
+    gc.collect()
+
     sd = load_torch_file(sd)
     sd = preprocess_state_dict(sd)
     guess = huggingface_guess.guess(sd)
@@ -766,6 +769,7 @@ def split_state_dict(sd, additional_state_dicts: list = None):
             asd = load_torch_file(asd)
             sd = replace_state_dict(sd, asd, guess)
             del asd
+            gc.collect()
 
     guess.clip_target = guess.clip_target(sd)
     guess.model_type = guess.model_type(sd)
