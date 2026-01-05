@@ -432,7 +432,7 @@ options_templates.update(options_section(('sampler-params', "Sampler parameters"
     'zimage_shift_override': OptionInfo(0.0, "Z-Image Flow Shift Override (0=auto)", gr.Slider, {"minimum": 0.0, "maximum": 5.0, "step": 0.1}, infotext='Z-Image shift').info('Override automatic flow shift calculation (0 = use automatic resolution-based shift)'),
     'noise_type': OptionInfo("gaussian", "Noise Type", gr.Dropdown, {"choices": ["gaussian", "pink", "brown", "blue", "violet", "pyramid"]}, infotext='Noise type').info('Type of noise to use for sampling initialization'),
     'apg_enabled': OptionInfo(False, "Enable APG (Adaptive Projected Guidance)", infotext='APG enabled').info('Reduces oversaturation at high CFG scales by projecting updates orthogonally'),
-    'apg_eta': OptionInfo(1.0, "APG Eta", gr.Slider, {"minimum": 0.0, "maximum": 2.0, "step": 0.05}, infotext='APG eta').info('Parallel component weight (1.0 = standard CFG, 0.0 = fully orthogonal, lower = less saturation)'),
+    'apg_eta': OptionInfo(1.0, "APG Eta", gr.Slider, {"minimum": 0.0, "maximum": 1.0, "step": 0.05}, infotext='APG eta').info('Parallel component weight (1.0 = standard CFG, 0.0 = fully orthogonal, lower = less saturation)'),
     'apg_momentum': OptionInfo(-0.5, "APG Momentum", gr.Slider, {"minimum": -1.0, "maximum": 1.0, "step": 0.05}, infotext='APG momentum').info('Running average momentum for smoother guidance (-0.5 recommended)'),
     'apg_threshold': OptionInfo(0.0, "APG Threshold", gr.Slider, {"minimum": 0.0, "maximum": 10.0, "step": 0.1}, infotext='APG threshold').info('Norm threshold for update scaling (0 = disabled)'),
  }))
