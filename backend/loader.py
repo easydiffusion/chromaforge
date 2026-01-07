@@ -213,6 +213,7 @@ dir_path = os.path.dirname(__file__)
 
 def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_path, state_dict):
     config_path = os.path.join(repo_path, component_name)
+    state_dict_dtype = memory_management.state_dict_dtype(state_dict) if state_dict else None
 
     if component_name in ['feature_extractor', 'safety_checker']:
         return None
@@ -423,6 +424,12 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
                 # Load ZImageTransformer2DModel directly from diffusers
                 from diffusers.models.transformers.transformer_z_image import ZImageTransformer2DModel
                 model_loader = lambda c: ZImageTransformer2DModel(**c)
+
+                if state_dict_dtype == "gguf":
+                    # bugfix: change the shape of "x_pad_token", "cap_pad_token" from [3840] to [1, 3840]
+                    for key in ["x_pad_token", "cap_pad_token"]:
+                        if key in state_dict:
+                            state_dict[key] = state_dict[key].unsqueeze(0)
             elif cls_name == 'SD3Transformer2DModel':
                 from backend.nn.mmditx import MMDiTX
                 model_loader = lambda c: MMDiTX(**c)
