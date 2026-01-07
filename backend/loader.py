@@ -545,73 +545,8 @@ def replace_state_dict(sd, asd, guess):
     vae_key_prefix = guess.vae_key_prefix[0]
     text_encoder_key_prefix = guess.text_encoder_key_prefix[0]
 
-    if 'token_embd.weight' in asd and 'blk.0.attn_k.weight' in asd:
-        # Handle GGUF format for Qwen3
-        gguf_qwen3_format = {
-            "token_embd.weight": "model.embed_tokens.weight",
-            "output_norm.weight": "model.norm.weight",
-        }
-        gguf_qwen3_layer_mappings = {
-            "attn_norm.weight": "input_layernorm.weight",
-            "attn_q.weight": "self_attn.q_proj.weight",
-            "attn_q_norm.weight": "self_attn.q_norm.weight",
-            "attn_k.weight": "self_attn.k_proj.weight",
-            "attn_k_norm.weight": "self_attn.k_norm.weight",
-            "attn_v.weight": "self_attn.v_proj.weight",
-            "attn_output.weight": "self_attn.o_proj.weight",
-            "ffn_norm.weight": "post_attention_layernorm.weight",
-            "ffn_gate.weight": "mlp.gate_proj.weight",
-            "ffn_up.weight": "mlp.up_proj.weight",
-            "ffn_down.weight": "mlp.down_proj.weight",
-        }
-        # Keys that need to be dequantized (2D weight matrices, not norms)
-        gguf_qwen3_dequant_keys = {
-            "token_embd.weight",
-            "attn_q.weight",
-            "attn_k.weight",
-            "attn_v.weight",
-            "attn_output.weight",
-            "ffn_gate.weight",
-            "ffn_up.weight",
-            "ffn_down.weight",
-        }
-
-        asd_new = {}
-        for k, v in asd.items():
-            new_k = k
-            needs_dequant = False
-
-            # Handle global keys
-            for gguf_key, target_key in gguf_qwen3_format.items():
-                if k == gguf_key:
-                    new_k = target_key
-                    if gguf_key in gguf_qwen3_dequant_keys:
-                        needs_dequant = True
-                    break
-
-            # Handle layer keys
-            if k.startswith("blk."):
-                parts = k.split(".", 2)
-                if len(parts) == 3:
-                    layer_num = parts[1]
-                    layer_suffix = parts[2]
-                    for gguf_suffix, target_suffix in gguf_qwen3_layer_mappings.items():
-                        if layer_suffix == gguf_suffix:
-                            new_k = f"model.layers.{layer_num}.{target_suffix}"
-                            if layer_suffix in gguf_qwen3_dequant_keys:
-                                needs_dequant = True
-                            break
-
-            # Dequantize GGUF parameters
-            if needs_dequant and hasattr(v, 'dequantize_as_pytorch_parameter'):
-                v = v.dequantize_as_pytorch_parameter()
-
-            asd_new[new_k] = v
-        asd.clear()
-        asd = asd_new
-
     if 'enc.blk.0.attn_k.weight' in asd:
-        wierd_t5_format_from_city96 = {
+        gguf_llm_format = {
             "enc.": "encoder.",
             ".blk.": ".block.",
             "token_embd": "shared",
@@ -630,7 +565,7 @@ def replace_state_dict(sd, asd, guess):
         wierd_t5_pre_quant_keys_from_city96 = ['shared.weight']
         asd_new = {}
         for k, v in asd.items():
-            for s, d in wierd_t5_format_from_city96.items():
+            for s, d in gguf_llm_format.items():
                 k = k.replace(s, d)
             asd_new[k] = v
         for k in wierd_t5_pre_quant_keys_from_city96:
@@ -644,6 +579,36 @@ def replace_state_dict(sd, asd, guess):
             del sd[k]
         for k, v in asd.items():
             sd[vae_key_prefix + k] = v
+
+    if 'blk.0.attn_norm.weight' in asd:
+        gguf_llm_format = {
+            "blk.": "model.layers.",
+            "attn_norm": "input_layernorm",
+            "attn_q_norm.": "self_attn.q_norm.",
+            "attn_k_norm.": "self_attn.k_norm.",
+            "attn_v_norm.": "self_attn.v_norm.",
+            "attn_q": "self_attn.q_proj",
+            "attn_k": "self_attn.k_proj",
+            "attn_v": "self_attn.v_proj",
+            "attn_output": "self_attn.o_proj",
+            "ffn_up": "mlp.up_proj",
+            "ffn_down": "mlp.down_proj",
+            "ffn_gate": "mlp.gate_proj",
+            "ffn_norm": "post_attention_layernorm",
+            "token_embd": "model.embed_tokens",
+            "output_norm": "model.norm",
+            "output.weight": "lm_head.weight",
+        }
+        asd_new = {}
+        for k, v in asd.items():
+            k_old = k
+            for s, d in gguf_llm_format.items():
+                k = k.replace(s, d)
+            asd_new[k] = v
+        for k in ("model.embed_tokens.weight",):
+            asd_new[k] = asd_new[k].dequantize_as_pytorch_parameter()
+        asd.clear()
+        asd = asd_new
 
 
     ##  identify model type
@@ -864,6 +829,24 @@ def replace_state_dict(sd, asd, guess):
         for k, v in asd.items():
             sd[f"{text_encoder_key_prefix}t5xxl.transformer.{k}"] = v
 
+    if "model.layers.0.post_feedforward_layernorm.weight" in asd:
+        assert "model.layers.0.self_attn.q_norm.weight" not in asd
+        for k, v in asd.items():
+            if k == "spiece_model":
+                continue
+            sd[f"{text_encoder_key_prefix}gemma2_2b.{k}"] = v
+
+    elif "model.layers.0.self_attn.k_proj.bias" in asd:
+        weight = asd["model.layers.0.self_attn.k_proj.bias"]
+        assert weight.shape[0] == 512
+        for k, v in asd.items():
+            sd[f"{text_encoder_key_prefix}qwen25_7b.{k}"] = v
+
+    elif "model.layers.0.post_attention_layernorm.weight" in asd:
+        assert "model.layers.0.self_attn.q_norm.weight" in asd
+        for k, v in asd.items():
+            sd[f"{text_encoder_key_prefix}qwen3_4b.transformer.{k}"] = v
+
     return sd
 
 
@@ -883,6 +866,7 @@ def split_state_dict(sd, additional_state_dicts: list = None):
 
     if isinstance(additional_state_dicts, list):
         for asd in additional_state_dicts:
+            print("Loading additional state dict:", asd)
             asd = load_torch_file(asd)
             sd = replace_state_dict(sd, asd, guess)
             del asd
