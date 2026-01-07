@@ -460,17 +460,17 @@ def prepare_environment():
         startup_timer.record("install open_clip")
 
     # Check if diffusers is installed with version >= 0.36.0.dev0
-    diffusers_installed = False
-    try:
-        import packaging.version
-        diffusers_version = importlib.metadata.version("diffusers")
-        if packaging.version.parse(diffusers_version) >= packaging.version.parse("0.36.0.dev0"):
-            diffusers_installed = True
-    except Exception:
-        pass
-    if not diffusers_installed:
-        run_pip("install git+https://github.com/huggingface/diffusers", "diffusers")
-        startup_timer.record("install diffusers")
+    # diffusers_installed = False
+    # try:
+    #     import packaging.version
+    #     diffusers_version = importlib.metadata.version("diffusers")
+    #     if packaging.version.parse(diffusers_version) >= packaging.version.parse("0.36.0.dev0"):
+    #         diffusers_installed = True
+    # except Exception:
+    #     pass
+    # if not diffusers_installed:
+    #     run_pip("install git+https://github.com/huggingface/diffusers", "diffusers")
+    #     startup_timer.record("install diffusers")
 
     if (not is_installed("xformers") or args.reinstall_xformers) and args.xformers:
         run_pip(f"install -U -I --no-deps {xformers_package}", "xformers")
