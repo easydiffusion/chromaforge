@@ -889,6 +889,14 @@ def create_ui():
                             zimage_shift = gr.Slider(minimum=0.0, maximum=30.0, step=0.05, label='Z-Image Shift', value=0.0, elem_id="txt2img_zimage_shift")
                             main_entry.ui_txt2img_zimage_shift = zimage_shift
                             cfg_scale.change(lambda x: gr.update(interactive=(x != 1)), inputs=[cfg_scale], outputs=[toprow.negative_prompt], queue=False, show_progress=False)
+                        with gr.Row():
+                            sigma_rescale_start = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Sigma Rescale Start', value=1.0, elem_id="txt2img_sigma_rescale_start")
+                            sigma_rescale_end = gr.Slider(minimum=0.0, maximum=0.5, step=0.01, label='Sigma Rescale End', value=0.0, elem_id="txt2img_sigma_rescale_end")
+                        with gr.Row():
+                            apg_enabled = gr.Checkbox(label='APG (Adaptive Projected Guidance)', value=False, elem_id="txt2img_apg_enabled")
+                            apg_eta = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='APG Eta', value=1.0, elem_id="txt2img_apg_eta")
+                            apg_momentum = gr.Slider(minimum=-1.0, maximum=1.0, step=0.05, label='APG Momentum', value=-0.5, elem_id="txt2img_apg_momentum")
+                            apg_threshold = gr.Slider(minimum=0.0, maximum=10.0, step=0.1, label='APG Threshold', value=0.0, elem_id="txt2img_apg_threshold")
 
                     elif category == "checkboxes":
                         with FormRow(elem_classes="checkboxes-row", variant="compact"):
@@ -1000,6 +1008,12 @@ def create_ui():
                 cfg_scale,
                 distilled_cfg_scale,
                 zimage_shift,
+                sigma_rescale_start,
+                sigma_rescale_end,
+                apg_enabled,
+                apg_eta,
+                apg_momentum,
+                apg_threshold,
                 height,
                 width,
                 enable_hr,
@@ -1094,6 +1108,13 @@ def create_ui():
                 PasteField(hr_cfg, "Hires CFG Scale", api="hr_cfg"),
                 PasteField(hr_distilled_cfg, "Hires Distilled CFG Scale", api="hr_distilled_cfg"),
                 PasteField(hr_prompts_container, lambda d: gr.update(visible=True) if d.get("Hires prompt", "") != "" or d.get("Hires negative prompt", "") != "" else gr.update()),
+                PasteField(zimage_shift, "Z-Image Shift", api="zimage_shift"),
+                PasteField(sigma_rescale_start, "Sigma Rescale Start", api="sigma_rescale_start"),
+                PasteField(sigma_rescale_end, "Sigma Rescale End", api="sigma_rescale_end"),
+                PasteField(apg_enabled, lambda d: "APG Eta" in d, api="apg_enabled"),
+                PasteField(apg_eta, "APG Eta", api="apg_eta"),
+                PasteField(apg_momentum, "APG Momentum", api="apg_momentum"),
+                PasteField(apg_threshold, "APG Threshold", api="apg_threshold"),
                 *scripts.scripts_txt2img.infotext_fields
             ]
             parameters_copypaste.add_paste_fields("txt2img", None, txt2img_paste_fields, override_settings)
@@ -1327,6 +1348,14 @@ def create_ui():
                             main_entry.ui_img2img_zimage_shift = zimage_shift
                             image_cfg_scale = gr.Slider(minimum=0, maximum=3.0, step=0.05, label='Image CFG Scale', value=1.5, elem_id="img2img_image_cfg_scale", visible=False)
                             cfg_scale.change(lambda x: gr.update(interactive=(x != 1)), inputs=[cfg_scale], outputs=[toprow.negative_prompt], queue=False, show_progress=False)
+                        with gr.Row():
+                            sigma_rescale_start = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Sigma Rescale Start', value=1.0, elem_id="img2img_sigma_rescale_start")
+                            sigma_rescale_end = gr.Slider(minimum=0.0, maximum=0.5, step=0.01, label='Sigma Rescale End', value=0.0, elem_id="img2img_sigma_rescale_end")
+                        with gr.Row():
+                            apg_enabled = gr.Checkbox(label='APG (Adaptive Projected Guidance)', value=False, elem_id="img2img_apg_enabled")
+                            apg_eta = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='APG Eta', value=1.0, elem_id="img2img_apg_eta")
+                            apg_momentum = gr.Slider(minimum=-1.0, maximum=1.0, step=0.05, label='APG Momentum', value=-0.5, elem_id="img2img_apg_momentum")
+                            apg_threshold = gr.Slider(minimum=0.0, maximum=10.0, step=0.1, label='APG Threshold', value=0.0, elem_id="img2img_apg_threshold")
 
                     elif category == "checkboxes":
                         with FormRow(elem_classes="checkboxes-row", variant="compact"):
@@ -1407,6 +1436,12 @@ def create_ui():
                 cfg_scale,
                 distilled_cfg_scale,
                 zimage_shift,
+                sigma_rescale_start,
+                sigma_rescale_end,
+                apg_enabled,
+                apg_eta,
+                apg_momentum,
+                apg_threshold,
                 image_cfg_scale,
                 denoising_strength,
                 selected_scale_tab,
@@ -1556,6 +1591,13 @@ def create_ui():
                 (inpainting_fill, 'Masked content'),
                 (inpaint_full_res, 'Inpaint area'),
                 (inpaint_full_res_padding, 'Masked area padding'),
+                (zimage_shift, "Z-Image Shift"),
+                (sigma_rescale_start, "Sigma Rescale Start"),
+                (sigma_rescale_end, "Sigma Rescale End"),
+                (apg_enabled, lambda d: "APG Eta" in d),
+                (apg_eta, "APG Eta"),
+                (apg_momentum, "APG Momentum"),
+                (apg_threshold, "APG Threshold"),
                 *scripts.scripts_img2img.infotext_fields
             ]
             parameters_copypaste.add_paste_fields("img2img", init_img.background, img2img_paste_fields, override_settings)
