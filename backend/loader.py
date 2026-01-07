@@ -1170,7 +1170,7 @@ def forge_loader(sd, additional_state_dicts=None, preset=None):
         return ChromaDCT(estimated_config=estimated_config, huggingface_components=huggingface_components)
 
     # Load Z-Image when 'z' preset is selected
-    if preset == 'z':
+    if preset == 'z' or "Z-Image" in estimated_config.huggingface_repo:
         print("DEBUG: Loading Z-Image engine (preset selected)")
         return ZImage(components_dict=huggingface_components)
 
